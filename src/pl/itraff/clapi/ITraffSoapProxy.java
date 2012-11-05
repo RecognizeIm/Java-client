@@ -179,7 +179,7 @@ public class ITraffSoapProxy implements pl.itraff.clapi.ITraffSoap {
   public java.util.HashMap recognize(byte[] imgData) throws IOException, JSONException {
 	  String md5hash = getMD5FromKeyAndImage(apiKey, imgData);
 		
-		URL url = new URL("http://clapidev.pandora.itraff.pl/recognize/33");
+		URL url = new URL("http://recognize.im/recognize/"+clientId);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 		conn.setDoOutput(true);
 		conn.setRequestMethod("POST");

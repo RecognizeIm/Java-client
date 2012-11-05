@@ -22,7 +22,7 @@ public class ITraffLocator extends org.apache.axis.client.Service implements pl.
     }
 
     // Use to get a proxy class for iTraffSoap
-    private java.lang.String iTraffSoap_address = "http://clapidev.pandora.itraff.pl/";
+    private java.lang.String iTraffSoap_address = "http://clapi.itraff.pl/";
 
     public java.lang.String getiTraffSoapAddress() {
         return iTraffSoap_address;
