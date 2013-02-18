@@ -73,6 +73,14 @@ public class Recognize {
 																// recognizion
 																// result (size
 																// == 1)
+			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
+			result = recognizeMulti(imgData);
+			List recognizedIdMultiList = (List) result.get("id"); // list containing
+																// the best
+																// recognizion
+																// result (size
+																// == 1)
+
 
 		} catch (RemoteException e) {
 			// TODO handle the case when there was a proble with accessing the
@@ -151,6 +159,28 @@ public class Recognize {
 	 */
 	public static Map recognizeReturnAll(byte[] imgData) throws IOException, JSONException {
 		URL url = new URL("http://recognize.im/recognize/allResults/" + clientId);
+		return recognize(imgData, url);
+	}
+	
+	/**
+	 * Calls the recognition method in multi mode which returnes all of the recognition
+	 * objects on the taken photo
+	 * 
+	 * @param imgData
+	 *            array of bytes of image data
+	 * @return map containing the result from the recognition service. It
+	 *         contains "status" key (value for this key is a String) and "id"
+	 *         keys (value for this key of a List) OR null if there was an
+	 *         internal error.
+	 * @throws IOException
+	 *             when there was an IO problem with accessing the recognition
+	 *             service
+	 * @throws JSONException
+	 *             when the result from the recognition service was not in JSON
+	 *             format
+	 */
+	public static Map recognizeMulti(byte[] imgData) throws IOException, JSONException {
+		URL url = new URL("http://recognize.im/recognize/multi/" + clientId);
 		return recognize(imgData, url);
 	}
 
