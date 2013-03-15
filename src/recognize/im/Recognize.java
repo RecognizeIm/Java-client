@@ -1,6 +1,8 @@
 package recognize.im;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +19,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.imageio.ImageIO;
+
 import org.apache.commons.codec.binary.Base64;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -28,14 +32,27 @@ public class Recognize {
 
 	// These are the credentials (you can find it at:
 	// https://www.recognize.im/user/profile)
-	static String clientId = "001"; // Client ID
-	static String apiKey = "01xyz01"; // API Key
-	static String clapiKey = "01abc01xyz01"; // CLAPI Key
+	static String clientId = "";	// Client ID
+	static String apiKey = "";		// API Key
+	static String clapiKey = "";	// CLAPI Key
+	
+	//These are the limits for query images:
+	//for SingleIR
+	final static float SINGLEIR_MAX_FILE_SIZE = 500.f;		//KBytes
+	final static int SINGLEIR_MIN_DIMENSION = 100;			//pix
+	final static float SINGLEIR_MIN_IMAGE_SURFACE = 0.05f;	//Mpix
+	final static float SINGLEIR_MAX_IMAGE_SURFACE = 0.31f;	//Mpix
+	
+	//for MultipleIR
+	final static float MULTIPLEIR_MAX_FILE_SIZE = 3500.f;	//KBytes
+	final static int MULTIPLEIR_MIN_DIMENSION = 100;		//pix
+	final static float MULTIPLEIR_MIN_IMAGE_SURFACE = 0.1f;	//Mpix
+	final static float MULTIPLEIR_MAX_IMAGE_SURFACE = 5.1f;	//Mpix
 
 	public static void main(String[] args) {
 
-		byte[] imgData = readImageData("joker.jpg");
-		if (imgData == null) {
+		Image image = readImageData("joker.jpg");
+		if (image == null || image.getData() == null) {
 			System.err.println("Given image could not be read");
 			return;
 		}
@@ -46,7 +63,7 @@ public class Recognize {
 
 			// insert new image with 123# as ID and "Image name" as the name
 			// (examplary response: {status=0})
-			Map result = iTraffSaop.imageInsert("123#", "Image name", Base64.encodeBase64String(imgData));
+			Map result = iTraffSaop.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
 
 			// apply changes (this needs to be invoked before the newly added
 			// (examplary response: {status=0})
@@ -60,21 +77,22 @@ public class Recognize {
 
 			// recognize image (this returns all the results from the
 			// recognition)
-			result = recognizeReturnAll(imgData);
+			result = recognizeReturnAll(image);
 			List recognizedIdsList = (List) result.get("id"); // list of
 																// recognized
 																// images ids
 
 			// recognize image (this returns only the best result from the
 			// recognition)
-			result = recognizeReturnBest(imgData);
+			result = recognizeReturnBest(image);
 			List recognizedIdList = (List) result.get("id"); // list containing
 																// the best
 																// recognizion
 																// result (size
 																// == 1)
+			
 			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
-			result = recognizeMulti(imgData);
+			result = recognizeMulti(image);
 			List recognizedIdMultiList = (List) result.get("id"); // list containing
 																// the best
 																// recognizion
@@ -103,27 +121,32 @@ public class Recognize {
 	 * @return array of bytes containing image data, or null if image could not
 	 *         be read
 	 */
-	private static byte[] readImageData(String imageName) {
+	private static Image readImageData(String imageName) {
 		byte[] imgData = null;
+		BufferedImage img = null;
 		try {
-			// read image data
+			//read image data
 			InputStream imgIs = new FileInputStream(imageName);
 			imgData = new byte[imgIs.available()];
 			imgIs.read(imgData);
 			imgIs.close();
+			
+			//read image dimensions
+			img = ImageIO.read(new File(imageName));
+			
 		} catch (IOException e) {
 			// TODO handle IOException when there is a problem with reading
-			// image data
+			return null;
 		}
-		return imgData;
+		return new Image(imgData, img.getWidth(), img.getHeight());
 	}
 
 	/**
-	 * Calls the recognition method which returnes only the best recognition
+	 * Calls the recognition method which returns only the best recognition
 	 * result
 	 * 
-	 * @param imgData
-	 *            array of bytes of image data
+	 * @param image
+	 *            the image data
 	 * @return map containing the result from the recognition service. It
 	 *         contains "status" key (value for this key is a String) and "id"
 	 *         keys (value for this key of a List) OR null if there was an
@@ -135,17 +158,18 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeReturnBest(byte[] imgData) throws IOException, JSONException {
+	public static Map recognizeReturnBest(Image image) throws IOException, JSONException {
+		String recognizeMode = "single";
 		URL url = new URL("http://recognize.im/recognize/" + clientId);
-		return recognize(imgData, url);
+		return recognize(image, url, recognizeMode);
 	}
 
 	/**
-	 * Calls the recognition method which returnes all of the recognition
+	 * Calls the recognition method which returns all of the recognition
 	 * results
 	 * 
-	 * @param imgData
-	 *            array of bytes of image data
+	 * @param image
+	 *            the image data
 	 * @return map containing the result from the recognition service. It
 	 *         contains "status" key (value for this key is a String) and "id"
 	 *         keys (value for this key of a List) OR null if there was an
@@ -157,17 +181,18 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeReturnAll(byte[] imgData) throws IOException, JSONException {
+	public static Map recognizeReturnAll(Image image) throws IOException, JSONException {
+		String recognizeMode = "single";
 		URL url = new URL("http://recognize.im/recognize/allResults/" + clientId);
-		return recognize(imgData, url);
+		return recognize(image, url, recognizeMode);
 	}
 	
 	/**
-	 * Calls the recognition method in multi mode which returnes all of the recognition
+	 * Calls the recognition method in multi mode which returns all of the recognition
 	 * objects on the taken photo
 	 * 
-	 * @param imgData
-	 *            array of bytes of image data
+	 * @param image
+	 *            the image data
 	 * @return map containing the result from the recognition service. It
 	 *         contains "status" key (value for this key is a String) and "id"
 	 *         keys (value for this key of a List) OR null if there was an
@@ -179,18 +204,21 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeMulti(byte[] imgData) throws IOException, JSONException {
-		URL url = new URL("http://recognize.im/recognize/multi/" + clientId);
-		return recognize(imgData, url);
+	public static Map recognizeMulti(Image image) throws IOException, JSONException {
+		String recognizeMode = "multi";
+		URL url = new URL("http://recognize.im/recognize/" + recognizeMode + "/" + clientId);
+		return recognize(image, url, recognizeMode);
 	}
 
 	/**
 	 * Calls the recognition service at the given url
 	 * 
-	 * @param imgData
-	 *            array of bytes of image data
+	 * @param image
+	 *            the image data
 	 * @param url
 	 *            URL of the recognition service
+	 * @param recognizeMode
+	 * 			the current recognize mode
 	 * @return map containing the result from the recognition service. It
 	 *         contains "status" key (value for this key is a String) and "id"
 	 *         keys (value for this key of a List) OR null if there was an
@@ -202,11 +230,16 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	private static Map<String, Object> recognize(byte[] imgData, URL url) throws IOException, JSONException {
-		String md5hash = getMD5FromKeyAndImage(apiKey, imgData);
-		if (md5hash == null) {
-			return null;
+	private static Map<String, Object> recognize(Image image, URL url, String recognizeMode) throws IOException, JSONException {
+		if (!checkImageLimits(image, recognizeMode)) {
+			return new HashMap<String, Object>();
 		}
+		
+		String md5hash = getMD5FromKeyAndImage(apiKey, image.getData());
+		if (md5hash == null) {
+			return new HashMap<String, Object>();
+		}
+		
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 		conn.setDoOutput(true);
 		conn.setRequestMethod("POST");
@@ -214,13 +247,15 @@ public class Recognize {
 		conn.addRequestProperty("x-itraff-hash", md5hash);
 
 		OutputStream os = conn.getOutputStream();
-		os.write(imgData);
+		os.write(image.getData());
 		os.flush();
 
 		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
 
 		String output;
 		output = getResponseJson(br);
+		
+		System.out.println(output);
 
 		JSONObject jdata = new JSONObject(output);
 
@@ -246,6 +281,44 @@ public class Recognize {
 		}
 		conn.disconnect();
 		return outMap;
+	}
+	
+	/**
+	 * Checks the image limits for the current recognize mode
+	 * 
+	 * @param image
+	 *            the image data
+	 * @param recognizeMode
+	 * 			the current recognize mode
+	 * @return true if the image fulfills the limits, otherwise false
+	 */
+	private static boolean checkImageLimits(Image image, String recognizeMode) {
+		final float imageSurface = (float)(image.getHeight() * image.getHeight()) / 1000000.f;
+		final float fileSize = (float)image.getData().length / 1000.f;
+			
+		if (recognizeMode.equalsIgnoreCase("single")) {			
+			if (fileSize > SINGLEIR_MAX_FILE_SIZE  ||
+					image.getHeight() < SINGLEIR_MIN_DIMENSION ||
+					image.getWidth() < SINGLEIR_MIN_DIMENSION ||
+					imageSurface < SINGLEIR_MIN_IMAGE_SURFACE ||
+					imageSurface > SINGLEIR_MAX_IMAGE_SURFACE) {
+				return false;
+			}
+			
+		} else if (recognizeMode.equalsIgnoreCase("multi")) {
+			if (fileSize > MULTIPLEIR_MAX_FILE_SIZE  ||
+					image.getHeight() < MULTIPLEIR_MIN_DIMENSION ||
+					image.getWidth() < MULTIPLEIR_MIN_DIMENSION ||
+					imageSurface < MULTIPLEIR_MIN_IMAGE_SURFACE ||
+					imageSurface > MULTIPLEIR_MAX_IMAGE_SURFACE) {
+				return false;
+			}
+			
+		} else {
+			System.out.println("Unknown recognize mode selected.");
+		}
+		
+		return true;
 	}
 
 	/**
