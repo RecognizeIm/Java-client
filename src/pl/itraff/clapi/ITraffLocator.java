@@ -8,10 +8,8 @@
 package pl.itraff.clapi;
 
 public class ITraffLocator extends org.apache.axis.client.Service implements pl.itraff.clapi.ITraff {
-
     public ITraffLocator() {
     }
-
 
     public ITraffLocator(org.apache.axis.EngineConfiguration config) {
         super(config);

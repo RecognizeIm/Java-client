@@ -35,6 +35,13 @@ public class Recognize {
 	static String clientId = "";	// Client ID
 	static String apiKey = "";		// API Key
 	static String clapiKey = "";	// CLAPI Key
+	// https://www.recognize.im/user/profile)
+
+	/**
+	 * The address of the server to be queried with image requests.
+	 */
+	final static String SERVER_ADDRESS = "https://recognize.im/";
+	
 	
 	//These are the limits for query images:
 	//for SingleIR
@@ -44,14 +51,14 @@ public class Recognize {
 	final static float SINGLEIR_MAX_IMAGE_SURFACE = 0.31f;	//Mpix
 	
 	//for MultipleIR
-	final static float MULTIPLEIR_MAX_FILE_SIZE = 3500.f;	//KBytes
-	final static int MULTIPLEIR_MIN_DIMENSION = 100;		//pix
-	final static float MULTIPLEIR_MIN_IMAGE_SURFACE = 0.1f;	//Mpix
-	final static float MULTIPLEIR_MAX_IMAGE_SURFACE = 5.1f;	//Mpix
+	final static float MULTIIR_MAX_FILE_SIZE = 3500.f;	//KBytes
+	final static int MULTIIR_MIN_DIMENSION = 100;		//pix
+	final static float MULTIIR_MIN_IMAGE_SURFACE = 0.1f;	//Mpix
+	final static float MULTIIR_MAX_IMAGE_SURFACE = 5.1f;	//Mpix
 
 	public static void main(String[] args) {
 
-		Image image = readImageData("joker.jpg");
+		Image image = readImageData("000.jpg");
 		if (image == null || image.getData() == null) {
 			System.err.println("Given image could not be read");
 			return;
@@ -59,48 +66,62 @@ public class Recognize {
 		try {
 
 			// initialize proxy class (this perform authorisation)
-			ITraffSoapProxy iTraffSaop = new ITraffSoapProxy(clientId, clapiKey, apiKey);
-
+			ITraffSoapProxy iTraffSoap = new ITraffSoapProxy(clientId, clapiKey, apiKey);
+			
 			// insert new image with 123# as ID and "Image name" as the name
 			// (examplary response: {status=0})
-			Map result = iTraffSaop.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
+		//	Map result = iTraffSoap.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
 
 			// apply changes (this needs to be invoked before the newly added
 			// (examplary response: {status=0})
 			// picture can be recognizable)
-			result = iTraffSaop.indexBuild();
+		//	result = iTraffSoap.indexBuild();
 
 			// check progress of applying the changes (examplary response:
 			// {status=0, data={progress=100, status=ok, uploading=0,
 			// needUpdate=0}})
-			result = iTraffSaop.indexStatus();
+			Map result = iTraffSoap.indexStatus();
+			System.out.println(result.toString());
 
 			// recognize image (this returns all the results from the
 			// recognition)
 			result = recognizeReturnAll(image);
-			List recognizedIdsList = (List) result.get("id"); // list of
+			List recognizedIdsList = (List) result.get("id");	// list of
 																// recognized
 																// images ids
+			System.out.println(result.toString());
 
 			// recognize image (this returns only the best result from the
 			// recognition)
 			result = recognizeReturnBest(image);
-			List recognizedIdList = (List) result.get("id"); // list containing
+			List recognizedIdList = (List) result.get("id");	// list containing
 																// the best
 																// recognizion
 																// result (size
 																// == 1)
+			System.out.println(result.toString());
 			
 			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
 			result = recognizeMulti(image);
-			List recognizedIdMultiList = (List) result.get("id"); // list containing
-																// the best
-																// recognizion
-																// result (size
-																// == 1)
+			List recognizedIdMultiList = (List) result.get("id");	// list containing
+																	// the best
+																	// recognizion
+																	// result (size
+																	// == 1)
+			System.out.println(result.toString());
+			
+			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
+			result = recognizeMultiAllInstances(image);
+			List recognizedIdMultiAllInstancesList = (List) result.get("id");	// list containing
+																				// the best
+																				// recognizion
+																				// result (size
+																				// == 1)
+			System.out.println(result.toString());
 
 
 		} catch (RemoteException e) {
+			System.out.println(e.toString());
 			// TODO handle the case when there was a proble with accessing the
 			// remote SAOP service
 		} catch (JSONException e) {
@@ -160,7 +181,7 @@ public class Recognize {
 	 */
 	public static Map recognizeReturnBest(Image image) throws IOException, JSONException {
 		String recognizeMode = "single";
-		URL url = new URL("http://recognize.im/recognize/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "recognize/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 
@@ -183,13 +204,13 @@ public class Recognize {
 	 */
 	public static Map recognizeReturnAll(Image image) throws IOException, JSONException {
 		String recognizeMode = "single";
-		URL url = new URL("http://recognize.im/recognize/allResults/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "recognize/allResults/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 	
 	/**
-	 * Calls the recognition method in multi mode which returns all of the recognition
-	 * objects on the taken photo
+	 * Calls the recognition method in multi mode which returns a single instance of each
+	 * object detected on the test image
 	 * 
 	 * @param image
 	 *            the image data
@@ -206,7 +227,30 @@ public class Recognize {
 	 */
 	public static Map recognizeMulti(Image image) throws IOException, JSONException {
 		String recognizeMode = "multi";
-		URL url = new URL("http://recognize.im/recognize/" + recognizeMode + "/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "recognize/multi/" + clientId);
+		return recognize(image, url, recognizeMode);
+	}
+	
+	/**
+	 * Calls the recognition method in multi mode which returns all instances of each
+	 * object detected on the test image
+	 * 
+	 * @param image
+	 *            the image data
+	 * @return map containing the result from the recognition service. It
+	 *         contains "status" key (value for this key is a String) and "id"
+	 *         keys (value for this key of a List) OR null if there was an
+	 *         internal error.
+	 * @throws IOException
+	 *             when there was an IO problem with accessing the recognition
+	 *             service
+	 * @throws JSONException
+	 *             when the result from the recognition service was not in JSON
+	 *             format
+	 */
+	public static Map recognizeMultiAllInstances(Image image) throws IOException, JSONException {
+		String recognizeMode = "multi";
+		URL url = new URL(SERVER_ADDRESS + "recognize/multi/allInstances/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 
@@ -232,6 +276,7 @@ public class Recognize {
 	 */
 	private static Map<String, Object> recognize(Image image, URL url, String recognizeMode) throws IOException, JSONException {
 		if (!checkImageLimits(image, recognizeMode)) {
+			System.out.println("Image does not fulfill the requirements, terminating.");
 			return new HashMap<String, Object>();
 		}
 		
@@ -254,8 +299,6 @@ public class Recognize {
 
 		String output;
 		output = getResponseJson(br);
-		
-		System.out.println(output);
 
 		JSONObject jdata = new JSONObject(output);
 
@@ -293,8 +336,8 @@ public class Recognize {
 	 * @return true if the image fulfills the limits, otherwise false
 	 */
 	private static boolean checkImageLimits(Image image, String recognizeMode) {
-		final float imageSurface = (float)(image.getHeight() * image.getHeight()) / 1000000.f;
-		final float fileSize = (float)image.getData().length / 1000.f;
+		final float imageSurface = (float)(image.getHeight() * image.getWidth()) / 1000000.f;	//Mpix
+		final float fileSize = (float)image.getData().length / 1000.f;							//KBytes
 			
 		if (recognizeMode.equalsIgnoreCase("single")) {			
 			if (fileSize > SINGLEIR_MAX_FILE_SIZE  ||
@@ -306,11 +349,11 @@ public class Recognize {
 			}
 			
 		} else if (recognizeMode.equalsIgnoreCase("multi")) {
-			if (fileSize > MULTIPLEIR_MAX_FILE_SIZE  ||
-					image.getHeight() < MULTIPLEIR_MIN_DIMENSION ||
-					image.getWidth() < MULTIPLEIR_MIN_DIMENSION ||
-					imageSurface < MULTIPLEIR_MIN_IMAGE_SURFACE ||
-					imageSurface > MULTIPLEIR_MAX_IMAGE_SURFACE) {
+			if (fileSize > MULTIIR_MAX_FILE_SIZE  ||
+					image.getHeight() < MULTIIR_MIN_DIMENSION ||
+					image.getWidth() < MULTIIR_MIN_DIMENSION ||
+					imageSurface < MULTIIR_MIN_IMAGE_SURFACE ||
+					imageSurface > MULTIIR_MAX_IMAGE_SURFACE) {
 				return false;
 			}
 			

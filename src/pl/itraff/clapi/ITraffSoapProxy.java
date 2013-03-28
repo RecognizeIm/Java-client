@@ -5,7 +5,7 @@ import java.rmi.RemoteException;
 public class ITraffSoapProxy implements pl.itraff.clapi.ITraffSoap {
 	private String _endpoint = null;
 	private pl.itraff.clapi.ITraffSoap iTraffSoap = null;
-	private String clientId = null, clapiKey = null, apiKey = null;
+	private String clientId = null, clapiKey = null, apiKey = null;	
 
 	public ITraffSoapProxy() {
 		_initITraffSoapProxy();
