@@ -84,12 +84,6 @@ public class ITraffSoapProxy implements pl.itraff.clapi.ITraffSoap {
 		return iTraffSoap.userDelete();
 	}
 
-	public java.util.HashMap userPro() throws java.rmi.RemoteException {
-		if (iTraffSoap == null)
-			_initITraffSoapProxy();
-		return iTraffSoap.userPro();
-	}
-
 	public java.util.HashMap userLimits() throws java.rmi.RemoteException {
 		if (iTraffSoap == null)
 			_initITraffSoapProxy();

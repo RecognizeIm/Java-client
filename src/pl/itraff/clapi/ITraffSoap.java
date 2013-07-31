@@ -16,7 +16,6 @@ public interface ITraffSoap extends java.rmi.Remote {
     public java.util.HashMap userGet() throws java.rmi.RemoteException;
     public java.util.HashMap userUpdate(java.util.HashMap info_billing, java.util.HashMap info_invoice) throws java.rmi.RemoteException;
     public java.util.HashMap userDelete() throws java.rmi.RemoteException;
-    public java.util.HashMap userPro() throws java.rmi.RemoteException;
     public java.util.HashMap userLimits() throws java.rmi.RemoteException;
     public java.util.HashMap paymentList() throws java.rmi.RemoteException;
     public java.util.HashMap imageCount() throws java.rmi.RemoteException;
