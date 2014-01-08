@@ -70,7 +70,7 @@ public class Recognize {
 			
 			// insert new image with 123# as ID and "Image name" as the name
 			// (examplary response: {status=0})
-		//	Map result = iTraffSoap.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
+			Map result2 = iTraffSoap.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
 
 			// apply changes (this needs to be invoked before the newly added
 			// (examplary response: {status=0})
@@ -86,15 +86,15 @@ public class Recognize {
 			// recognize image (this returns all the results from the
 			// recognition)
 			result = recognizeReturnAll(image);
-			List recognizedIdsList = (List) result.get("id");	// list of
+			List recognizedObjectsList = (List) result.get("objects");	// list of
 																// recognized
-																// images ids
+																// images
 			System.out.println(result.toString());
 
 			// recognize image (this returns only the best result from the
 			// recognition)
 			result = recognizeReturnBest(image);
-			List recognizedIdList = (List) result.get("id");	// list containing
+			List recognizedObjectsList = (List) result.get("objects");	// list containing
 																// the best
 																// recognizion
 																// result (size
@@ -103,7 +103,7 @@ public class Recognize {
 			
 			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
 			result = recognizeMulti(image);
-			List recognizedIdMultiList = (List) result.get("id");	// list containing
+			List recognizedObjectsMultiList = (List) result.get("objects");	// list containing
 																	// the best
 																	// recognizion
 																	// result (size
@@ -112,7 +112,7 @@ public class Recognize {
 			
 			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
 			result = recognizeMultiAllInstances(image);
-			List recognizedIdMultiAllInstancesList = (List) result.get("id");	// list containing
+			List recognizedObjectsMultiAllInstancesList = (List) result.get("objects");	// list containing
 																				// the best
 																				// recognizion
 																				// result (size
@@ -204,7 +204,7 @@ public class Recognize {
 	 */
 	public static Map recognizeReturnAll(Image image) throws IOException, JSONException {
 		String recognizeMode = "single";
-		URL url = new URL(SERVER_ADDRESS + "recognize/allResults/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "v2/recognize/all/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 	
@@ -227,7 +227,7 @@ public class Recognize {
 	 */
 	public static Map recognizeMulti(Image image) throws IOException, JSONException {
 		String recognizeMode = "multi";
-		URL url = new URL(SERVER_ADDRESS + "recognize/multi/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "v2/recognize/multi/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 	
@@ -250,7 +250,7 @@ public class Recognize {
 	 */
 	public static Map recognizeMultiAllInstances(Image image) throws IOException, JSONException {
 		String recognizeMode = "multi";
-		URL url = new URL(SERVER_ADDRESS + "recognize/multi/allInstances/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "v2/recognize/multi/all/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 
