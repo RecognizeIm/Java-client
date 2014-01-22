@@ -94,7 +94,7 @@ public class Recognize {
 			// recognize image (this returns only the best result from the
 			// recognition)
 			result = recognizeReturnBest(image);
-			List recognizedObjectsList = (List) result.get("objects");	// list containing
+			List recognizedObjectsList1 = (List) result.get("objects");	// list containing
 																// the best
 																// recognizion
 																// result (size
