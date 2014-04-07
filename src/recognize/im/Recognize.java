@@ -22,9 +22,7 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 import org.apache.commons.codec.binary.Base64;
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import pl.itraff.clapi.ITraffSoapProxy;
 
@@ -58,7 +56,7 @@ public class Recognize {
 
 	public static void main(String[] args) {
 
-		Image image = readImageData("000.jpg");
+		Image image = readImageData("joker.jpg");
 		if (image == null || image.getData() == null) {
 			System.err.println("Given image could not be read");
 			return;
@@ -70,55 +68,39 @@ public class Recognize {
 			
 			// insert new image with 123# as ID and "Image name" as the name
 			// (examplary response: {status=0})
-			Map result2 = iTraffSoap.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
+			Map<String, Object> result2 = iTraffSoap.imageInsert("123#", "Image name", Base64.encodeBase64String(image.getData()));
 
 			// apply changes (this needs to be invoked before the newly added
 			// (examplary response: {status=0})
 			// picture can be recognizable)
-		//	result = iTraffSoap.indexBuild();
+			// result2 = iTraffSoap.indexBuild();
 
 			// check progress of applying the changes (examplary response:
 			// {status=0, data={progress=100, status=ok, uploading=0,
 			// needUpdate=0}})
-			Map result = iTraffSoap.indexStatus();
+			Map<String, Object> result = iTraffSoap.indexStatus();
 			System.out.println(result.toString());
 
 			// recognize image (this returns all the results from the
 			// recognition)
-			result = recognizeReturnAll(image);
-			List recognizedObjectsList = (List) result.get("objects");	// list of
+			APIResponse response = recognizeReturnAll(image);
 																// recognized
 																// images
-			System.out.println(result.toString());
+			System.out.println(response.toString());
 
 			// recognize image (this returns only the best result from the
 			// recognition)
-			result = recognizeReturnBest(image);
-			List recognizedObjectsList1 = (List) result.get("objects");	// list containing
-																// the best
-																// recognizion
-																// result (size
-																// == 1)
-			System.out.println(result.toString());
+			response = recognizeReturnBest(image);
+			System.out.println(response.toString());
+			image.draw(response).save("frames.jpg");
 			
 			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
-			result = recognizeMulti(image);
-			List recognizedObjectsMultiList = (List) result.get("objects");	// list containing
-																	// the best
-																	// recognizion
-																	// result (size
-																	// == 1)
-			System.out.println(result.toString());
+			response = recognizeMulti(image);
+			System.out.println(response.toString());
 			
 			// recognize image (in multiple mode). Remember to change the mode at recognize.im first.
-			result = recognizeMultiAllInstances(image);
-			List recognizedObjectsMultiAllInstancesList = (List) result.get("objects");	// list containing
-																				// the best
-																				// recognizion
-																				// result (size
-																				// == 1)
-			System.out.println(result.toString());
-
+			response = recognizeMultiAllInstances(image);
+			System.out.println(response.toString());
 
 		} catch (RemoteException e) {
 			System.out.println(e.toString());
@@ -179,9 +161,9 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeReturnBest(Image image) throws IOException, JSONException {
+	public static APIResponse recognizeReturnBest(Image image) throws IOException, JSONException {
 		String recognizeMode = "single";
-		URL url = new URL(SERVER_ADDRESS + "recognize/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "v2/recognize/single/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 
@@ -202,9 +184,9 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeReturnAll(Image image) throws IOException, JSONException {
+	public static APIResponse recognizeReturnAll(Image image) throws IOException, JSONException {
 		String recognizeMode = "single";
-		URL url = new URL(SERVER_ADDRESS + "v2/recognize/all/" + clientId);
+		URL url = new URL(SERVER_ADDRESS + "v2/recognize/single/all/" + clientId);
 		return recognize(image, url, recognizeMode);
 	}
 	
@@ -225,7 +207,7 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeMulti(Image image) throws IOException, JSONException {
+	public static APIResponse recognizeMulti(Image image) throws IOException, JSONException {
 		String recognizeMode = "multi";
 		URL url = new URL(SERVER_ADDRESS + "v2/recognize/multi/" + clientId);
 		return recognize(image, url, recognizeMode);
@@ -248,7 +230,7 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	public static Map recognizeMultiAllInstances(Image image) throws IOException, JSONException {
+	public static APIResponse recognizeMultiAllInstances(Image image) throws IOException, JSONException {
 		String recognizeMode = "multi";
 		URL url = new URL(SERVER_ADDRESS + "v2/recognize/multi/all/" + clientId);
 		return recognize(image, url, recognizeMode);
@@ -274,15 +256,18 @@ public class Recognize {
 	 *             when the result from the recognition service was not in JSON
 	 *             format
 	 */
-	private static Map<String, Object> recognize(Image image, URL url, String recognizeMode) throws IOException, JSONException {
+	private static APIResponse recognize(Image image, URL url, String recognizeMode) throws IOException, JSONException {
+		APIResponse response = new APIResponse(-1);
 		if (!checkImageLimits(image, recognizeMode)) {
-			System.out.println("Image does not fulfill the requirements, terminating.");
-			return new HashMap<String, Object>();
+			System.err.println("Image does not fulfill the requirements, terminating.");
+			response.setMessage("Image does not fulfill the requirements, terminating.");
+			return response;
 		}
 		
 		String md5hash = getMD5FromKeyAndImage(apiKey, image.getData());
 		if (md5hash == null) {
-			return new HashMap<String, Object>();
+			response.setMessage("Empty hash");
+			return response;
 		}
 		
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -299,31 +284,10 @@ public class Recognize {
 
 		String output;
 		output = getResponseJson(br);
+		response = new APIResponse(output);
 
-		JSONObject jdata = new JSONObject(output);
-
-		// retrieving data from the response
-		Iterator<String> nameItr = jdata.keys();
-		HashMap<String, Object> outMap = new HashMap<String, Object>();
-		while (nameItr.hasNext()) {
-			String key = nameItr.next();
-			if ("id".equals(key) && jdata.optJSONArray(key) != null) {
-				JSONArray jsonArray = jdata.optJSONArray(key);
-				List<String> idsList = new ArrayList<String>();
-				for (int i = 0; i < jsonArray.length(); i++) {
-					idsList.add((String) jsonArray.get(i));
-				}
-				outMap.put(key, idsList);
-			} else if ("id".equals(key)) {
-				List<String> idList = new ArrayList<String>();
-				idList.add(jdata.getString(key));
-				outMap.put(key, idList);
-			} else {
-				outMap.put(key, jdata.getString(key));
-			}
-		}
 		conn.disconnect();
-		return outMap;
+		return response;
 	}
 	
 	/**
